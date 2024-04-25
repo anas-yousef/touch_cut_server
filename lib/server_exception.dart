@@ -7,13 +7,15 @@ class ServerException implements Exception {
     required this.errorMessage,
     String? errorCode,
     this.errorBody,
-  }) : errorCode = errorCode ?? HttpStatus.internalServerError.toString();
+  }) : errorCode = errorCode != null
+            ? int.parse(errorCode)
+            : HttpStatus.internalServerError;
 
   /// The error message received
   final String errorMessage;
 
   /// Error code of exception
-  final String errorCode;
+  final int errorCode;
 
   /// An error body if available
   final Map<String, dynamic>? errorBody;
