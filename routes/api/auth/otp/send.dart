@@ -66,7 +66,16 @@ Future<Response> _sendOtp(RequestContext context) async {
         );
       }
     } else {
-      print('Signing in new user, $phoneNumber, with metadata $userMetadata');
+      print('Signing up new user, $phoneNumber, with metadata $userMetadata');
+      if (phoneNumberExists) {
+        return Response.json(
+          statusCode: HttpStatus.badRequest,
+          body: {
+            'error_message':
+                'User with the provided phone number already exists, please sign in',
+          },
+        );
+      }
       // userMetadata will be in the form
       // {'first_name': <value>, 'last_name': <value>, 'village': <value>}
       if (userMetadata
