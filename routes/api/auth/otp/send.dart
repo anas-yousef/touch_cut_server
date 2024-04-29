@@ -43,8 +43,8 @@ Future<Response> _sendOtp(RequestContext context) async {
       return Response.json();
     }
 
-    final phoneNumberExists =
-        await authRepo.phoneNumberExists(phoneNumber: phoneNumber);
+    final phoneNumberExists = false;
+    // await authRepo.phoneNumberExists(phoneNumber: phoneNumber);
     if (userMetadata == null) {
       // Signing in old user
       print('Signing in old user, $phoneNumber');

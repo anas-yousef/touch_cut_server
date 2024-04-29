@@ -20,15 +20,15 @@ Future<Response> _refreshAccessToken(RequestContext context) async {
   try {
     final body = await context.request.json() as Map<String, dynamic>;
     final refreshToken = body['refresh_token'] as String?;
-    if (refreshToken != null) {
+    if (refreshToken != null && refreshToken.isNotEmpty) {
       final tokens =
           await authRepo.refreshAccessToken(refreshToken: refreshToken);
       return Response.json(body: tokens);
     } else {
-      print('Refresh token is missing. Bad request');
+      print('Refresh token is missing or empty. Bad request');
       return Response.json(
         statusCode: HttpStatus.badRequest,
-        body: {'error_message': 'Refresh token is missing'},
+        body: {'error_message': 'Refresh token is missing or empty'},
       );
     }
   } on ServerException catch (serverException) {

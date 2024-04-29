@@ -25,6 +25,7 @@ class AuthRepo {
     required String phoneNumber,
     Map<String, dynamic>? data,
   }) async {
+    print(data);
     try {
       await supabaseClient.auth.signInWithOtp(
         phone: phoneNumber,
