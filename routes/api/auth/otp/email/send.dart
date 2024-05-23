@@ -14,7 +14,7 @@ Future<Response> onRequest(RequestContext context) async {
 }
 
 Future<Response> _sendOtp(RequestContext context) async {
-  print('Sending or resending OTP');
+  print('Sending or resending email OTP');
   final authRepo = context.read<AuthRepo>();
   try {
     final body = await context.request.json() as Map<String, dynamic>;
@@ -22,15 +22,15 @@ Future<Response> _sendOtp(RequestContext context) async {
 
     final resend = params['resend'];
 
-    final phoneNumber = body['phone_number'] as String?;
+    final email = body['email'] as String?;
     final userMetadata = body['user_metadata'] as Map<String, dynamic>?;
 
-    // Phone number must be given
-    if (phoneNumber == null) {
-      print('Phone number is null');
+    // Email must be given
+    if (email == null) {
+      print('Email is null');
       return Response.json(
         statusCode: HttpStatus.badRequest,
-        body: {'error_message': 'Phone number is missing'},
+        body: {'error_message': 'Email is missing'},
       );
     }
 
@@ -38,20 +38,20 @@ Future<Response> _sendOtp(RequestContext context) async {
     if (resend != null && resend.toLowerCase() == 'true') {
       print('Resending OTP');
       await authRepo.resendOtpToUser(
-        phoneNumber,
+        email: email,
       );
       return Response.json();
     }
 
-    final phoneNumberExists = false;
-    // await authRepo.phoneNumberExists(phoneNumber: phoneNumber);
+    final barbershopEmailExists =
+        await authRepo.barbershopEmailExists(email: email);
     if (userMetadata == null) {
       // Signing in old user
-      print('Signing in old user, $phoneNumber');
-      if (phoneNumberExists) {
+      print('Signing in old user, $email');
+      if (barbershopEmailExists) {
         // Phone number exists in system, we can proceed
         await authRepo.sendOtpToUser(
-          phoneNumber: phoneNumber,
+          email: email,
         );
         return Response.json();
       } else {
@@ -61,31 +61,33 @@ Future<Response> _sendOtp(RequestContext context) async {
           statusCode: HttpStatus.notFound,
           body: {
             'error_message':
-                'User with the provided phone number not found, please sign up',
+                'User with the provided email not found, please sign up',
           },
         );
       }
     } else {
-      print('Signing up new user, $phoneNumber, with metadata $userMetadata');
-      if (phoneNumberExists) {
+      print('Signing up new user, $email, with metadata $userMetadata');
+      if (barbershopEmailExists) {
         return Response.json(
           statusCode: HttpStatus.badRequest,
           body: {
             'error_message':
-                'User with the provided phone number already exists, please sign in',
+                'User with the provided email already exists, please sign in',
           },
         );
       }
       // userMetadata will be in the form
-      // {'first_name': <value>, 'last_name': <value>, 'village': <value>}
+      // {'first_name': <value>, 'last_name': <value>, 'village': <value>,
+      // 'phone_number': <value>}
       if (userMetadata
           case {
             'first_name': String _,
             'last_name': final String _,
             'village': final String _,
+            'phone_number': final String _,
           }) {
         await authRepo.sendOtpToUser(
-          phoneNumber: phoneNumber,
+          email: email,
           data: userMetadata,
         );
         return Response.json();

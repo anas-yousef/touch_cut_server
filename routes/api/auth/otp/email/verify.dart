@@ -17,21 +17,23 @@ Future<Response> onRequest(RequestContext context) async {
 /// We return the access and refresh token, where the client will need to
 /// save them locally
 Future<Response> _verifyOTP(RequestContext context) async {
-  print('Verifying OTP');
+  print('Verifying email OTP');
   final authRepo = context.read<AuthRepo>();
   try {
     final body = await context.request.json() as Map<String, dynamic>;
     final otpToken = body['otp_token'] as String?;
-    final phoneNumber = body['phone_number'] as String?;
-    if (otpToken != null && phoneNumber != null) {
-      final tokens =
-          await authRepo.verifyOTP(phoneNumber: phoneNumber, token: otpToken);
+    final email = body['email'] as String?;
+    if (otpToken != null && email != null) {
+      final tokens = await authRepo.verifyOTP(
+        email: email,
+        token: otpToken,
+      );
       return Response.json(body: tokens);
     } else {
-      print('Phone number, or OTP are missing. Bad request');
+      print('Email, or OTP are missing. Bad request');
       return Response.json(
         statusCode: HttpStatus.badRequest,
-        body: {'error_message': 'Phone number, or OTP are missing'},
+        body: {'error_message': 'Email, or OTP are missing'},
       );
     }
   } on ServerException catch (serverException) {

@@ -22,12 +22,17 @@ class AuthRepo {
 
   /// Send OTP to user
   Future<void> sendOtpToUser({
-    required String phoneNumber,
+    String? phoneNumber,
+    String? email,
     Map<String, dynamic>? data,
   }) async {
-    print(data);
     try {
+      _validateEmailAndPhoneNumber(
+        email: email,
+        phoneNumber: phoneNumber,
+      );
       await supabaseClient.auth.signInWithOtp(
+        email: email,
         phone: phoneNumber,
         data: data,
       );
@@ -38,6 +43,7 @@ class AuthRepo {
         errorMessage: authException.toString(),
       );
     } catch (err) {
+      print(err);
       throw AuthRepoException(
         errorMessage: err.toString(),
       );
@@ -45,15 +51,20 @@ class AuthRepo {
   }
 
   /// Resend OTP to user
-  Future<void> resendOtpToUser(
-    String phoneNumber,
-  ) async {
+  Future<void> resendOtpToUser({
+    String? phoneNumber,
+    String? email,
+  }) async {
     try {
-      final resendResponse = await supabaseClient.auth.resend(
-        type: OtpType.sms,
-        phone: phoneNumber,
+      _validateEmailAndPhoneNumber(
+        email: email,
+        phoneNumber: phoneNumber,
       );
-      // print(resendResponse.messageId);
+      await supabaseClient.auth.resend(
+        type: phoneNumber != null ? OtpType.sms : OtpType.email,
+        phone: phoneNumber,
+        email: email,
+      );
     } on AuthException catch (authException) {
       print(authException);
       throw AuthRepoException(
@@ -61,6 +72,7 @@ class AuthRepo {
         errorMessage: authException.toString(),
       );
     } catch (err) {
+      print(err);
       throw AuthRepoException(
         errorMessage: err.toString(),
       );
@@ -90,15 +102,22 @@ class AuthRepo {
   /// the access and refresh token, after creating a session
   /// for the user
   Future<Map<String, String>> verifyOTP({
-    required String phoneNumber,
     required String token,
+    String? phoneNumber,
+    String? email,
   }) async {
     try {
+      _validateEmailAndPhoneNumber(
+        email: email,
+        phoneNumber: phoneNumber,
+      );
       final authResponse = await supabaseClient.auth.verifyOTP(
-        type: OtpType.sms,
+        type: phoneNumber != null ? OtpType.sms : OtpType.email,
         token: token,
         phone: phoneNumber,
+        email: email,
       );
+      print('Hello $authResponse');
       final session = authResponse.session!;
       return {
         'access_token': session.accessToken,
@@ -114,6 +133,18 @@ class AuthRepo {
       throw AuthRepoException(
         errorMessage: err.toString(),
       );
+    }
+  }
+
+  void _validateEmailAndPhoneNumber({
+    String? email,
+    String? phoneNumber,
+  }) {
+    if (phoneNumber == null && email == null) {
+      throw Exception('Phone number and email cannot be null');
+    }
+    if (phoneNumber != null && email != null) {
+      throw Exception('Only supply either email or phone number');
     }
   }
 
@@ -140,19 +171,21 @@ class AuthRepo {
     }
   }
 
-  /// This function checks if the supplied phone number from the user is
-  /// in the DB, while trying to sign in. If not found, that means no user
+  /// This function checks if the supplied phone number from the customer is
+  /// in the DB, while trying to sign in. If not found, that means no customer
   /// exits with that phone number, therefore, we will return an error asking
-  /// the user to sign-up, if found, then we will go ahead and send the user
-  /// an SMS containing an OTP.
-  Future<bool> phoneNumberExists({required String phoneNumber}) async {
+  /// them to sign-up, if found, we will go ahead and send an SMS containing
+  /// an OTP.
+  /// IMPORTANT -> This is used to check customers, since customers sign in
+  /// using phone numbers.
+  Future<bool> customerPhoneNumberExists({required String phoneNumber}) async {
     // Supabase DB saves the phone number without the + sign
     var phoneNumberToCheck = phoneNumber;
     if (phoneNumber.startsWith('+')) {
       phoneNumberToCheck = phoneNumber.substring(1);
     }
     final data = await supabaseClient
-        .from('users')
+        .from('customers')
         .select()
         .eq('phone_number', phoneNumberToCheck);
     if (data.isEmpty) {
@@ -160,6 +193,21 @@ class AuthRepo {
       return false;
     }
     print('$phoneNumber found in the system');
+    return true;
+  }
+
+  /// Same check for the customer phone number, but in here, we check
+  /// the email of the barbershop
+  /// IMPORTANT -> This is used to check barbershops, since they sign in
+  /// using emails.
+  Future<bool> barbershopEmailExists({required String email}) async {
+    final data =
+        await supabaseClient.from('barbershops').select().eq('email', email);
+    if (data.isEmpty) {
+      print('$email not found in the system');
+      return false;
+    }
+    print('$email found in the system');
     return true;
   }
 }
